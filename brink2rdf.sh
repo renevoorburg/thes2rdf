@@ -1,14 +1,27 @@
 #/bin/bash
 
-## known issues:
+# brink2rdf.sh
 
-# processing using parallel causes entities to be translated to utf8 which is not wanted for <, > ...  This linke
-#sed 's@<\([^:]*\)>@-\1-@g' | sed 's@Gupta, <@Gupta, @g' | sed 's@USUS>, <@USUS@g' | sed 's@<Mayaw@Mayaw@g'
+# Creates rdf from the GGC-THES OAI-PMH dataset that lives at https://services.kb.nl/mdo/oai .
+# Outputs RDF/XML that can be used at http://data.bibliotheken.nl/id/dataset/brinkman .
+
+# Usage:
+
+# 1. Harvest thesaurus data with oai2linesrec.sh (https://github.com/renevoorburg/oai2linerec) using:
+# ./oai2linerec.sh -v -s GGC-THES -p mdoall -t 2021-06-21T00:00:00Z -b http://services.kb.nl/mdo/oai -o thesdata.xml
+#
+# Note: using an until date (-t) is strongly recommended!
+
+# 2. Process the harvested xml:
+# cat thesdata.xml | grep "set/Persoon" | ./nta2rdf.sh | xmllint --format - | uconv -x any-nfc - > out.rdf
+#
+# Notes:
+# 1. The DATE_MODIFIED paramete as defined in this script will end up in the final RDF.
+# 2. The pipe 'xmllint --format - | uconv -x any-nfc -' will ensure proper character encoding.
 
 
 #params:
 DATE_MODIFIED="2021-04-21"
-
 
 
 # header
@@ -20,26 +33,16 @@ echo '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdf
 while read line ; do
 
 	scopeNote=""
-	echo $line | grep -q '<datafield tag="003Z"> <subfield code="0">vorm</subfield>' && if [ "$?" == "0" ] ; then 
+	echo $line | grep -q '<datafield tag="003Z"> <subfield code="0">vorm</subfield>' && if [ "$?" == "0" ] ; then
 		scopeNote="<skos:scopeNote>vormtrefwoord</skos:scopeNote>"
 	fi
-
 
 	skos=$(echo $line | sed 's@.*\(<skos:Concept.*</skos:Concept>\).*@\1@' -)
 
 	line="$skos"
 
-	## core preparations / cleaning:
-	
-	#remove until rdf:RDF element
-	#line=$(echo $line | sed 's@^.*<rdf:RDF[^>]*>@@')
-	# and closing element
-	#line=$(echo $line | sed 's@</rdf:RDF.*$@@')
-
 	# restrict output to Brinkman
 	line=$(echo $line | grep "http://data.kb.nl/dataset/Brinkman" -)
-
-
 
 	## remove stuff we don't want:
 
@@ -52,18 +55,14 @@ while read line ; do
 	# remove <void:inDataset ...>
 	line=$(echo $line | sed 's@<void:inDataset[^>]*>@@')
 
-	#UDC is a notation 
-        #line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.udcc.org/\([0-9(][^"]*\)"/>@<skos:scopeNote rdf:datatype="http://udcdata.info/UDCnotation">\1</skos:scopeNote>@')
-        line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.udcc.org/\([0-9(][^"]*\)"/>@<skos:relatedMatch rdf:datatype="http://udcdata.info/UDCnotation">\1</skos:relatedMatch>@')
+	#UDC is a notation
+    line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.udcc.org/\([0-9(][^"]*\)"/>@<skos:relatedMatch rdf:datatype="http://udcdata.info/UDCnotation">\1</skos:relatedMatch>@')
 
 	# SISO - custom notatoion datatype URI
-        #line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.biblion.nl/siso/\([0-9(][^"]*\)"/>@<skos:scopeNote rdf:datatype="http://www.wikidata.org/entity/Q2582270">\1</skos:scopeNote>@')
-        #line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.biblion.nl/siso/\([0-9(][^"]*\)"/>@<skos:scopeNote rdf:datatype="http://www.nbdbiblion.nl/SISO">\1</skos:scopeNote>@')
-        #line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.biblion.nl/siso/\([0-9(][^"]*\)"/>@<skos:relatedMatch rdf:datatype="http://www.nbdbiblion.nl/SISO">\1</skos:relatedMatch>@')
-        line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.biblion.nl/siso/[0-9(][^"]*"/>@@')
+    line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="http://www.biblion.nl/siso/[0-9(][^"]*"/>@@')
 
 	# remove other skos:relatedMatch
-        line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="[^"]*"/>@@g')
+    line=$(echo $line | sed 's@<skos:relatedMatch rdf:resource="[^"]*"/>@@g')
 
 
 
@@ -83,37 +82,15 @@ while read line ; do
         nodedata="$nodedata"'<schema:dateModified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">'$DATE_MODIFIED'</schema:dateModified>'
 
         nodedata="$nodedata"'<schema:isBasedOn rdf:resource="http://services.kb.nl/mdo/oai?verb=GetRecord\&amp;identifier=GGC-THES:AC:'$ppn'\&amp;metadataPrefix=mdoall"/>'
-
-
         node="<schema:mainEntityOfPage><schema:WebPage>$nodedata</schema:WebPage></schema:mainEntityOfPage>"
         node=$node'<schema:mainEntityOfPage rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
 
         line=$(echo $line | sed "s@</skos:Concept>@$node<skos:inScheme rdf:resource=\"http://data.bibliotheken.nl/id/scheme/brinkman\"/>$scopeNote</skos:Concept>@")
 
-
-
-
-	## fixes:
-
-	# remove unknow /empty schema:deathDate
-	#line=$(echo $line | sed 's@<schema:deathDate/>@@')
-
-        # remove unknow /empty schema:birthhDate
-        #line=$(echo $line | sed 's@<schema:birthDate/>@@')
-
-	# remove (bracketed) stuff from schema name:
-	#line=$(echo $line | sed 's@\(<schema:name>[^(]*\)([^)]*)@\1@')
-
-	# remove spaces before end tag:
-	#line=$(echo $line | sed 's@\s*</@</@g')
-
-
 	## output result:
 	echo $line | grep '<'
 
 done
-
-
 
 # footer
 echo '</rdf:RDF>'

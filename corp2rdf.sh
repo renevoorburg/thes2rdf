@@ -1,21 +1,27 @@
 #/bin/bash
 
-# @author: rene.voorburg@kb.nl
-# @version: 2012-12-13
+# corp2rdf.sh
 
-# the ~ is considered to  be a safe seperator for sed
+# Creates rdf from the GGC-THES OAI-PMH dataset that lives at https://services.kb.nl/mdo/oai .
+# Outputs RDF/XML that can be used at http://data.bibliotheken.nl/id/dataset/corps .
 
-## known issues:
+# Usage:
 
-# TODO: picks just the firrst address, there might more
-# TODO: recognize web adresses
-# TODO: add geo data?
+# 1. Harvest thesaurus data with oai2linesrec.sh (https://github.com/renevoorburg/oai2linerec) using:
+# ./oai2linerec.sh -v -s GGC-THES -p mdoall -t 2021-06-21T00:00:00Z -b http://services.kb.nl/mdo/oai -o thesdata.xml
+#
+# Note: using an until date (-t) is strongly recommended!
 
+# 2. Process the harvested xml:
+# cat thesdata.xml | grep "set/Corp" | ./nta2rdf.sh | xmllint --format - | uconv -x any-nfc - > out.rdf
+#
+# Notes:
+# 1. The DATE_MODIFIED paramete as defined in this script will end up in the final RDF.
+# 2. The pipe 'xmllint --format - | uconv -x any-nfc -' will ensure proper character encoding.
 
 
 #params:
 DATE_MODIFIED="2020-12-07"
-
 
 
 # header
@@ -42,8 +48,6 @@ while read line ; do
 	# restrict output to persons
 	line=$(echo $line | grep "http://data.kb.nl/dataset/Corporaties" -)
 
-
-
 	## remove stuff we don't want:
 
 	# remove <dc:type ....>....</dc:type> stuff
@@ -64,11 +68,8 @@ while read line ; do
 	# retag as schema:Person iso skos:Concept
 	line=$(echo $line | sed 's~skos:Concept~schema:Organization~g')
 
-        # schema:name iso skos:prefLabel
-        line=$(echo $line | sed 's~skos:prefLabel~schema:name~g')
-
-	# duplicate schema:name and retag as rdfs:label
-	##line=$(echo $line | sed 's~\(<schema:name.*</schema:name>\)~\1\1~' | sed 's~<schema:name~<rdfs:label~' | sed 's~/schema:name>~/rdfs:label>~')
+    # schema:name iso skos:prefLabel
+    line=$(echo $line | sed 's~skos:prefLabel~schema:name~g')
 
 	# set proper URI (http://data.kb.nl/thesaurus/191687707 =>  http://data.bibliotheken.nl/id/thes/p191687707"
 	line=$(echo $line | sed 's~data.kb.nl/thesaurus/~data.bibliotheken.nl/id/thes/p~g')
@@ -140,16 +141,13 @@ while read line ; do
 	line=$(echo $line | sed 's~<schema:foundingDate>\([0-9]*\)</schema:foundingDate>~<schema:foundingDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">\1</schema:foundingDate>~g')
 	line=$(echo $line | sed 's~<schema:foundingDate>[^0-9]*</schema:foundingDate>~~g')
 
-
 	#
 	line=$(echo $line | sed 's~<schema:description>"\(.*\)"</schema:description>~<schema:description>\1</schema:description>~g')
-
 
 	## output result:
 	echo $line | grep '<'
 
 done
-
 
 
 # footer

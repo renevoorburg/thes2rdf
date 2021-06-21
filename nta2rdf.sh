@@ -1,25 +1,23 @@
 #/bin/bash
 
-## known issues:
+# nta2rdf.sh
 
-# DONE (using recoee) ppn 395143179, tekens naar utf-8
-# beste aanpak links dbnl, wikidata etc? zit in aparte graph?
-# ? skos:related altijd gebruikt voor pseudoniemen?
+# Creates rdf from the GGC-THES OAI-PMH dataset that lives at https://services.kb.nl/mdo/oai .
+# Outputs RDF/XML that can be used at http://data.bibliotheken.nl/id/dataset/persons .
 
+# Usage:
 
+# 1. Harvest thesaurus data with oai2linesrec.sh (https://github.com/renevoorburg/oai2linerec) using:
+# ./oai2linerec.sh -v -s GGC-THES -p mdoall -t 2021-06-21T00:00:00Z -b http://services.kb.nl/mdo/oai -o thesdata.xml
+#
+# Note: using an until date (-t) is strongly recommended!
 
-## new in this conversion (since the 2018-release...):
-
-# skos:editorialNote added, as rdfs:comment: CORRECTED: NOT added, AVG issues; see http://services.kb.nl/mdo/oai?verb=GetRecord&identifier=GGC-THES:AC:395286271&metadataPrefix=dcx
-# FIXED: removed empty birth- or deathdates
-# FIXED: removed (...) suffix as part of schema:name
-# CHANGED: owl:sameAs used more cautiously, usually replaced by less strict schema:sameAs
-# NEW skos:related relations added as schema:sameAs (TODO, is this always used for pseudonyms?)
-# NEW schema:dateModified added (use a approx date script was run /data was uploaded?)
-
-
-# processing using parallel causes entities to be translated to utf8 which is not wanted for <, > ...  This linke
-#sed 's@<\([^:]*\)>@-\1-@g' | sed 's@Gupta, <@Gupta, @g' | sed 's@USUS>, <@USUS@g' | sed 's@<Mayaw@Mayaw@g'
+# 2. Process the harvested xml:
+# cat thesdata.xml | grep "set/GTT"" | ./nta2rdf.sh | xmllint --format - | uconv -x any-nfc - > out.rdf
+#
+# Notes:
+# 1. The DATE_MODIFIED paramete as defined in this script will end up in the final RDF.
+# 2. The pipe 'xmllint --format - | uconv -x any-nfc -' will ensure proper character encoding.
 
 
 #params:
@@ -81,7 +79,7 @@ while read line ; do
         #line=$(echo $line | sed 's@skos:prefLabel@schema:name@g')
         line=$(echo $line | sed 's@skos:prefLabel@rdfs:label@g')
 
-	
+
 	# schema:givenName iso foaf:givenName
         line=$(echo $line | sed 's@foaf:name@schema:name@g')
         line=$(echo $line | sed 's@foaf:givenName@schema:givenName@g')
@@ -136,20 +134,13 @@ while read line ; do
 	# add datatype to birthDate:
 	line=$(echo $line | sed 's@<schema:birthDate>\([0-9]*\)</schema:birthDate>@<schema:birthDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">\1</schema:birthDate>@')
 
-
-	# remove (bracketed) stuff from schema name:
-	#line=$(echo $line | sed 's@\(<schema:name>[^(]*\)([^)]*)@\1@g')
-
 	# remove spaces before end tag:
 	line=$(echo $line | sed 's@\s*</@</@g')
-
 
 	## output result:
 	echo $line
 
 done
-
-
 
 # footer
 echo '</rdf:RDF>'
