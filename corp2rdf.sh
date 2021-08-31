@@ -16,15 +16,20 @@
 # cat thesdata.xml | grep "set/Corp" | ./nta2rdf.sh | xmllint --format - | uconv -x any-nfc - > out.rdf
 #
 # Notes:
-# 1. The DATE_MODIFIED paramete as defined in this script will end up in the final RDF.
+# 1. The DATE_MODIFIED parameter as supplied to this script will end up in the final RDF.
 # 2. The pipe 'xmllint --format - | uconv -x any-nfc -' will ensure proper character encoding.
 
+# check params supplied:
+if [ "$#" -ne 1 ]
+then
+  echo "Please supply the modification date as paramater (for example 2021-03-11 )"
+  exit 1
+fi
 
 #params:
-DATE_MODIFIED="2020-12-07"
+DATE_MODIFIED=$1
 
-
-# header
+# output header:
 echo '<?xml version="1.0" encoding="UTF-8"?>'
 echo '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:schema="http://schema.org/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:kbdef="http://data.bibliotheken.nl/def#">'
 
