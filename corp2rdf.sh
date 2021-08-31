@@ -13,10 +13,10 @@
 # Note: using an until date (-t) is strongly recommended!
 
 # 2. Process the harvested xml:
-# cat thesdata.xml | grep "set/Corp" | ./nta2rdf.sh | xmllint --format - | uconv -x any-nfc - > out.rdf
+# cat thesdata.xml | grep "dataset/Corporaties" | ./corp2rdf.sh {yyyy-mm-dd} | xmllint --format - | uconv -x any-nfc - > out.rdf
 #
 # Notes:
-# 1. The DATE_MODIFIED parameter as supplied to this script will end up in the final RDF.
+# 1. The DATE_MODIFIED parameter as supplied to this script {yyyy-mm-dd} will end up in the final RDF.
 # 2. The pipe 'xmllint --format - | uconv -x any-nfc -' will ensure proper character encoding.
 
 # check params supplied:
