@@ -44,12 +44,13 @@ while read line ; do
 	isni=$(echo $line | xmllint --xpath "//*[local-name()='datafield'][contains(@tag,'003B')][*[local-name()='subfield'][contains(@code, '2')]='isni']/*[local-name()='subfield'][contains(@code, 'a')]/text()" 2> /dev/null -)
 	isni=$(echo $isni | egrep "[0-9]{16}")
 
-	#
-        natio=$(echo $line | xmllint --xpath "//*[local-name()='datafield'][contains(@tag,'019@')][1]/*[local-name()='subfield'][contains(@code, 'a')]/text()" 2> /dev/null -)
+	# grab nationality
+    natio=$(echo $line | xmllint --xpath "//*[local-name()='datafield'][contains(@tag,'019@')][1]/*[local-name()='subfield'][contains(@code, 'a')]/text()" 2> /dev/null -)
+    natio=$(echo $natio | awk '{print$1}' | egrep "[a-z]*")
 
 	# continu processing skos
-        skos=$(echo $line | sed 's@.*\(<skos:Concept.*</skos:Concept>\).*@\1@' -)
-        line="$skos"
+    skos=$(echo $line | sed 's@.*\(<skos:Concept.*</skos:Concept>\).*@\1@' -)
+    line="$skos"
 
 	#remove until rdf:RDF element
 	line=$(echo $line | sed 's@^.*<rdf:RDF[^>]*>@@')
@@ -76,19 +77,17 @@ while read line ; do
 		line=$(echo $line | sed "s@</schema:Person>@<schema:sameAs rdf:resource=\"http://www.isni.org/isni/$isni\"/></schema:Person>@")
 	fi
 
-       if [ ! -z "$natio" ] ; then
-                line=$(echo $line | sed  "s@</schema:Person>@<schema:nationality>$natio</schema:nationality></schema:Person>@")
-        fi
+    if [ ! -z "$natio" ] ; then
+        line=$(echo $line | sed  "s@</schema:Person>@<schema:nationality>$natio</schema:nationality></schema:Person>@")
+    fi
 
 
-        # schema:name iso skos:prefLabel
-        #line=$(echo $line | sed 's@skos:prefLabel@schema:name@g')
-        line=$(echo $line | sed 's@skos:prefLabel@rdfs:label@g')
-
+    # schema:name iso skos:prefLabel
+    line=$(echo $line | sed 's@skos:prefLabel@rdfs:label@g')
 
 	# schema:givenName iso foaf:givenName
-        line=$(echo $line | sed 's@foaf:name@schema:name@g')
-        line=$(echo $line | sed 's@foaf:givenName@schema:givenName@g')
+    line=$(echo $line | sed 's@foaf:name@schema:name@g')
+    line=$(echo $line | sed 's@foaf:givenName@schema:givenName@g')
 
 	#
 	line=$(echo $line | sed 's@foaf:familyName@schema:familyName@g')
@@ -112,27 +111,27 @@ while read line ; do
 	line=$(echo $line | sed 's@skos:related@schema:sameAs@g')
 
 
-        # add 'meta' node:
-        ppn=$(echo $line | sed 's@.*<schema:Person rdf:about="http://data.bibliotheken.nl/id/thes/p\([0-9Xx]*\)">.*@\1@')
-        nodedata='<rdf:type rdf:resource="http://schema.org/Dataset"/>'
-        nodedata="$nodedata"'<owl:sameAs rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
-        nodedata="$nodedata"'<kbdef:ppn>'$ppn'</kbdef:ppn>'
-        nodedata="$nodedata"'<schema:license rdf:resource="http://opendatacommons.org/licenses/by/1-0/"/>'
-        nodedata="$nodedata"'<schema:isPartOf rdf:resource="http://data.bibliotheken.nl/id/dataset/persons"/>'
-        nodedata="$nodedata"'<schema:mainEntity rdf:resource="http://data.bibliotheken.nl/id/thes/p'$ppn'"/>'
-        nodedata="$nodedata"'<schema:dateModified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">'$DATE_MODIFIED'</schema:dateModified>'
+    # add 'meta' node:
+    ppn=$(echo $line | sed 's@.*<schema:Person rdf:about="http://data.bibliotheken.nl/id/thes/p\([0-9Xx]*\)">.*@\1@')
+    nodedata='<rdf:type rdf:resource="http://schema.org/Dataset"/>'
+    nodedata="$nodedata"'<owl:sameAs rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
+    nodedata="$nodedata"'<kbdef:ppn>'$ppn'</kbdef:ppn>'
+    nodedata="$nodedata"'<schema:license rdf:resource="http://opendatacommons.org/licenses/by/1-0/"/>'
+    nodedata="$nodedata"'<schema:isPartOf rdf:resource="http://data.bibliotheken.nl/id/dataset/persons"/>'
+    nodedata="$nodedata"'<schema:mainEntity rdf:resource="http://data.bibliotheken.nl/id/thes/p'$ppn'"/>'
+    nodedata="$nodedata"'<schema:dateModified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">'$DATE_MODIFIED'</schema:dateModified>'
 	nodedata="$nodedata"'<schema:isBasedOn rdf:resource="http://services.kb.nl/mdo/oai?verb=GetRecord\&amp;identifier=GGC-THES:AC:'$ppn'\&amp;metadataPrefix=mdoall"/>'
-        node="<schema:mainEntityOfPage><schema:WebPage>$nodedata</schema:WebPage></schema:mainEntityOfPage>"
-        #node=$node'<schema:mainEntityOfPage rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
-        line=$(echo $line | sed "s@</schema:Person>@$node</schema:Person>@")
+    node="<schema:mainEntityOfPage><schema:WebPage>$nodedata</schema:WebPage></schema:mainEntityOfPage>"
+    #node=$node'<schema:mainEntityOfPage rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
+    line=$(echo $line | sed "s@</schema:Person>@$node</schema:Person>@")
 
 	## fixes:
 
 	# remove unknow /empty schema:deathDate
 	line=$(echo $line | sed 's@<schema:deathDate/>@@')
 
-        # remove unknow /empty schema:birthhDate
-        line=$(echo $line | sed 's@<schema:birthDate/>@@')
+    # remove unknow /empty schema:birthhDate
+    line=$(echo $line | sed 's@<schema:birthDate/>@@')
 
 	# add datatype to deathDate:
 	line=$(echo $line | sed 's@<schema:deathDate>\([0-9]*\)</schema:deathDate>@<schema:deathDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">\1</schema:deathDate>@')
