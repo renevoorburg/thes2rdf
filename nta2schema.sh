@@ -1,23 +1,14 @@
 #/bin/bash
-set +H
 
-while getopts "x" option ; do
-    case $option in
-        x)  OUTPUT_XML=true
-            ;;
-    esac
-done
-shift "$(($OPTIND -1))"
+HEADER='<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:schema="http://schema.org/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:void="http://rdfs.org/ns/void#" xmlns:kbdef="http://data.bibliotheken.nl/def#">'
 
-MODIFICATION_DATE=`date -I`
-SED="sed"
-if [ "`uname`" == "Darwin" ] ; then
-    if ! hash gsed 2>/dev/null; then
-        echo "Requires GNU sed. Not found. Exiting."
-        exit 1
-    fi        
-    SED="gsed"	
-fi
+source $(dirname "$0")/src/functions.sh
+
+read_commandline_parameters "$@"
+validate_initial_conditions
+
+#####
 
 line=`cat <&0 | perl -pe 's@\n@@gi' | perl -pe 's@$@\n@'`
 
@@ -67,7 +58,6 @@ line=$(echo $line | $SED 's@skos:prefLabel@rdfs:label@g')
 line=$(echo $line | $SED 's@foaf:name@schema:name@g')
 line=$(echo $line | $SED 's@foaf:givenName@schema:givenName@g')
 
-#
 line=$(echo $line | $SED 's@foaf:familyName@schema:familyName@g')
 
 # set proper URI (http://data.kb.nl/thesaurus/191687707 =>  http://data.bibliotheken.nl/id/thes/p191687707"
@@ -102,7 +92,6 @@ node="<schema:mainEntityOfPage><schema:WebPage>$nodedata</schema:WebPage></schem
 #node=$node'<schema:mainEntityOfPage rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
 line=$(echo $line | $SED "s@</schema:Person>@$node</schema:Person>@")
 
-## fixes:
 # remove unknow /empty schema:deathDate
 line=$(echo $line | $SED 's@<schema:deathDate/>@@')
 
@@ -118,18 +107,4 @@ line=$(echo $line | $SED 's@<schema:birthDate>\([0-9]*\)</schema:birthDate>@<sch
 # remove spaces before end tag:
 line=$(echo $line | $SED 's@\s*</@</@g')
 
-
-if  [ "$OUTPUT_XML" = true ] ; then
-    if [ ! -z "$line" ]  ; then
-        (
-            echo '<?xml version="1.0" encoding="UTF-8"?>'
-            echo '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:schema="http://schema.org/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:void="http://rdfs.org/ns/void#" xmlns:kbdef="http://data.bibliotheken.nl/def#">'
-            echo $line
-	        echo '</rdf:RDF>'
-        ) | xmllint --format - | uconv -x any-nfc
-    else
-        echo ''
-    fi
-else
-    echo $line
-fi
+output_line
