@@ -36,6 +36,10 @@ check_software_dependencies()
         echo "Requires uconv. Not found. Exiting."
         exit 1
     fi
+    if ! hash recode 2>/dev/null; then
+        echo "Requires recode. Not found. Exiting."
+        exit 1
+    fi
     SED="sed"
     if [ "`uname`" == "Darwin" ] ; then
         if ! hash gsed 2>/dev/null; then
