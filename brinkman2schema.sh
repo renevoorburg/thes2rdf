@@ -49,7 +49,7 @@ line=$(echo $line | $SED 's@data.kb.nl/thesaurus/@data.bibliotheken.nl/id/thes/p
 
 # add 'meta' node:
 ppn=$(echo $line | $SED 's@.*<skos:Concept rdf:about="http://data.bibliotheken.nl/id/thes/p\([0-9Xx]*\)">.*@\1@')
-nodedata='<rdf:type rdf:resource="http://schema.org/Dataset"/>'
+nodedata=''
 nodedata="$nodedata"'<owl:sameAs rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
 nodedata="$nodedata"'<kbdef:ppn>'$ppn'</kbdef:ppn>'
 nodedata="$nodedata"'<schema:license rdf:resource="http://creativecommons.org/publicdomain/zero/1.0/"/>'
@@ -58,7 +58,7 @@ nodedata="$nodedata"'<schema:mainEntity rdf:resource="http://data.bibliotheken.n
 nodedata="$nodedata"'<schema:dateModified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">'$DATE_MODIFIED'</schema:dateModified>'
 
 nodedata="$nodedata"'<schema:isBasedOn rdf:resource="http://services.kb.nl/mdo/oai?verb=GetRecord\&amp;identifier=GGC-THES:AC:'$ppn'\&amp;metadataPrefix=mdoall"/>'
-node="<schema:mainEntityOfPage><schema:WebPage>$nodedata</schema:WebPage></schema:mainEntityOfPage>"
+node="<schema:mainEntityOfPage><schema:AboutPage>$nodedata</schema:AboutPage></schema:mainEntityOfPage>"
 node=$node'<schema:mainEntityOfPage rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
 
 line=$(echo $line | sed "s@</skos:Concept>@$node<skos:inScheme rdf:resource=\"http://data.bibliotheken.nl/id/scheme/brinkman\"/>$scopeNote</skos:Concept>@")

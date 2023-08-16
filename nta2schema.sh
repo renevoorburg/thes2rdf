@@ -80,7 +80,7 @@ line=$(echo $line | $SED 's@skos:related@schema:sameAs@g')
 
 # add 'meta' node:
 ppn=$(echo $line | $SED 's@.*<schema:Person rdf:about="http://data.bibliotheken.nl/id/thes/p\([0-9Xx]*\)">.*@\1@')
-nodedata='<rdf:type rdf:resource="http://schema.org/Dataset"/>'
+nodedata=''
 nodedata="$nodedata"'<owl:sameAs rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
 nodedata="$nodedata"'<kbdef:ppn>'$ppn'</kbdef:ppn>'
 nodedata="$nodedata"'<schema:license rdf:resource="http://creativecommons.org/publicdomain/zero/1.0/"/>'
@@ -88,7 +88,7 @@ nodedata="$nodedata"'<schema:isPartOf rdf:resource="http://data.bibliotheken.nl/
 nodedata="$nodedata"'<schema:mainEntity rdf:resource="http://data.bibliotheken.nl/id/thes/p'$ppn'"/>'
 nodedata="$nodedata"'<schema:dateModified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">'$MODIFICATION_DATE'</schema:dateModified>'
 nodedata="$nodedata"'<schema:isBasedOn rdf:resource="http://services.kb.nl/mdo/oai?verb=GetRecord\&amp;identifier=GGC-THES:AC:'$ppn'\&amp;metadataPrefix=mdoall"/>'
-node="<schema:mainEntityOfPage><schema:WebPage>$nodedata</schema:WebPage></schema:mainEntityOfPage>"
+node="<schema:mainEntityOfPage><schema:AboutPage>$nodedata</schema:AboutPage></schema:mainEntityOfPage>"
 #node=$node'<schema:mainEntityOfPage rdf:resource="http://data.bibliotheken.nl/doc/thes/p'$ppn'"/>'
 line=$(echo $line | $SED "s@</schema:Person>@$node</schema:Person>@")
 
